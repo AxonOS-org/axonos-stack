@@ -71,8 +71,21 @@ fn run(seed: u64, frames: u64) -> i32 {
     let mut sup = Supervisor::default();
     let mut vault = Vault::new();
 
-    // 3 200 bits: one hundred single-scalar quality readings, and not one more.
-    vault.issue(Grant::new(1, Purpose::QualityFeedback, 3_200, u64::MAX));
+    // 2 048 bits: sixty-four single-scalar readings, which is every entry the
+    // audit log can hold at the minimum charge. RFC-0009 N5 refuses anything
+    // larger, because a budget that cannot be recorded is not the binding
+    // constraint and no reader of the grant could tell.
+    //
+    // The return value is checked. An earlier revision of this session ignored
+    // it, and when vault 0.2.0 began refusing the old 3 200-bit grant the
+    // session ran to completion with no grant installed, reporting NoSuchGrant
+    // for every reading — a silent misconfiguration wearing the appearance of
+    // a working run. That is precisely the failure this repository exists to
+    // catch, and it was caught by the repository catching it.
+    if !vault.issue(Grant::new(1, Purpose::QualityFeedback, 2_048, u64::MAX)) {
+        println!("FATAL  the vault refused the grant — budget exceeds recordable capacity");
+        return 1;
+    }
 
     println!("AxonOS reference session");
     println!(
@@ -87,7 +100,7 @@ fn run(seed: u64, frames: u64) -> i32 {
         budget.utilisation_ppm() / 10_000,
         (budget.utilisation_ppm() / 1_000) % 10
     );
-    println!("  grant 1 · QualityFeedback · 3200 bits");
+    println!("  grant 1 · QualityFeedback · 2048 bits (= log capacity × 32)");
     println!();
 
     let mut posture = sup.posture();
@@ -222,10 +235,13 @@ fn run(seed: u64, frames: u64) -> i32 {
         "  disclosed {} bits over {releases} release(s) · {refusals} refused",
         vault.total_released_bits()
     );
+    let (left, of) = vault
+        .grant(1)
+        .map(|g| (g.remaining_bits(), g.budget_bits))
+        .unwrap_or((0, 0));
     println!(
-        "  vault holds {} frames; grant 1 has {} of 3200 bits left",
-        vault.sealed_len(),
-        vault.grant(1).map(|g| g.remaining_bits()).unwrap_or(0)
+        "  vault holds {} frames; grant 1 has {left} of {of} bits left",
+        vault.sealed_len()
     );
 
     // The accounting identity the whole stack exists to keep. If this ever

@@ -75,19 +75,18 @@ fn a_degraded_chain_stops_actuating_and_keeps_recording() {
 }
 
 #[test]
-fn the_vault_stops_of_its_own_accord_and_never_exceeds_the_grant() {
-    // A 60 000-frame session asks for 240 readings against a 100-reading
-    // budget. Something must stop it, and the transcript must say which.
+fn the_two_bounds_now_agree() {
+    // This test records a defect and its closure.
     //
-    // Wiring the chain revealed which: the audit log fills at 64 entries
-    // before the 3 200-bit budget is spent, so the effective ceiling is 2 048
-    // bits and the grant's declared figure is not the binding one. That is a
-    // real inconsistency between two bounds in axonos-vault, found by running
-    // the organs together and by nothing else — it is recorded in the README
-    // and is the first item for vault 0.2.
+    // axonos-vault once issued a 3 200-bit grant against a 64-entry audit log,
+    // so the effective ceiling was 2 048 bits and the figure written in the
+    // grant was not the one that stopped it. Both behaviours were individually
+    // correct and individually tested; only running the organs together
+    // surfaced the disagreement, which is the argument for this repository
+    // existing at all.
     //
-    // What must hold regardless, and is asserted here: releases stop, nothing
-    // is ever released unrecorded, and the total never exceeds the grant.
+    // RFC-0009 N5 closed it: a grant whose budget cannot be recorded is
+    // refused at issue. Budget and log capacity now reach zero together.
     let t = session(&["--seed", "3", "--frames", "60000"]);
     let disclosed: u32 = t
         .lines()
@@ -96,15 +95,15 @@ fn the_vault_stops_of_its_own_accord_and_never_exceeds_the_grant() {
         .and_then(|n| n.parse().ok())
         .expect("the summary reports disclosed bits");
     assert!(
-        disclosed <= 3_200,
-        "released {disclosed} bits against a 3200-bit grant"
-    );
-    assert!(
-        t.contains("DENY  LogFull") || t.contains("DENY  budget exhausted"),
-        "a long session must be refused by one bound or the other, and say so"
+        t.contains("DENY  budget exhausted") || t.contains("DENY  LogFull"),
+        "a long session must be refused and say by which bound"
     );
     assert_eq!(
         disclosed, 2_048,
-        "64 recorded releases of 32 bits — the log is the binding bound"
+        "64 releases of 32 bits: the two bounds now coincide"
+    );
+    assert!(
+        t.contains("of 2048 bits left"),
+        "the grant must advertise the figure it enforces"
     );
 }

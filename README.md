@@ -35,19 +35,24 @@ without hardware"*. `SimDevice` was half of it. This is the rest.
 ## What the session says
 
 ```text
+  seed 7 · 250 SPS · 4000 µs period · 3000 frames · fault profile FIELD
+  chain WCRT 972 µs, 17.3% of the period
+  grant 1 · QualityFeedback · 2048 bits (= log capacity × 32)
+
 t=   0.000s  posture Nominal
 t=   2.000s  ACQ  Overrun { lost: 2 }
 t=   2.000s  posture Nominal → Degraded   (FrameLoss { lost: 2 })
 t=   2.512s  posture Degraded → Nominal   (Recovered)
 t=   4.828s  posture Nominal → Degraded   (LeadOff { frames: 8 })
 t=   4.924s  posture Degraded → Restricted   (LeadOff { frames: 32 })
-t=   5.000s  READ  bad 51 of 250 frames · 32 bits · 3040 left  [untrusted]
+t=   5.000s  READ  bad 51 of 250 frames · 32 bits · 1856 left  [untrusted]
 
 ── session summary ──
   delivered 2992 · lost 10 · integrity failures 3
   posture Restricted after 6 transition(s)
   capabilities: acquire=true classify=true actuate=false trustworthy=false
   disclosed 352 bits over 11 release(s) · 0 refused
+  vault holds 250 frames; grant 1 has 1696 of 2048 bits left
   accounting: 2992 delivered + 10 lost = 3002 produced ✓
 ```
 
@@ -56,24 +61,32 @@ recording, and marks every subsequent reading untrusted. The last line is the
 identity the whole stack exists to keep: **delivered + lost = produced**. If it
 ever fails, one of the three organs is lying about what it saw.
 
-## What the chain found on its first run
+## What the chain has found so far
 
-The reference session immediately surfaced a defect that no component test could
-have: **`axonos-vault` has two bounds that disagree.**
+Three defects, none of which a component test could reach. This is the record,
+because a repository that only reports its successes is a repository whose
+failures went somewhere else.
 
-A grant declares a budget in bits — 3 200, or one hundred 32-bit readings. The
-audit log holds 64 entries, and the vault refuses to release anything it cannot
-record. So the effective ceiling is **2 048 bits, not the 3 200 the grant
-states**. Both behaviours are individually correct and individually tested; put
-together they make the grant's declared figure not the binding one.
+**The two bounds that disagreed.** `axonos-vault` issued 3 200-bit grants
+against a 64-entry audit log, so the effective ceiling was 2 048 bits and the
+figure written in the grant was not the one that stopped it. Both behaviours
+were individually correct and individually tested. Closed by RFC-0009 N5 in
+vault 0.2.0; budget and log capacity now reach zero together.
 
-The fix belongs upstream — the vault should refuse to *issue* a grant whose
-budget cannot be spent within its own log capacity, rather than silently
-enforcing a stricter ceiling than it advertises. It is the first item for vault
-0.2, and it is exactly the kind of thing this repository exists to find.
+**A silently swallowed refusal.** This session called `vault.issue(...)` and
+ignored its return value. When vault 0.2.0 began refusing the oversized grant,
+the session ran to completion with no grant installed, reporting `NoSuchGrant`
+for every reading — a misconfiguration wearing the appearance of a working
+run. Found by re-pinning, and fixed here: the return is checked and the
+session fails loudly.
 
-Until then, `tests/reference.rs` asserts the true behaviour and names it, rather
-than asserting the assumption.
+**Numbers that were never measured.** `axonos-hal` v0.1.1 carried a
+seven-entry stage table documented as measured on the reference hardware, and
+a utilisation ceiling of 0.80 against a published 0.25 — which admitted
+500 SPS, a configuration this project's own RFC-0001 forbids. Corrected in
+0.2.0 and recorded as RFC-0008 D1 and D2. The session's utilisation line moved
+from 24.4 % to the published 17.3 % as a result, which is why this
+repository's transcript is versioned rather than regenerated quietly.
 
 ## What CI checks, and why
 
@@ -106,9 +119,9 @@ electrodes → axonos-hal ─┬─→ axonos-vault      (what leaves, and how m
 
 | Organ | Pinned | Role |
 |:--|:--|:--|
-| [`axonos-hal`](https://github.com/AxonOS-org/axonos-hal) | `v0.1.1` | the contract with silicon |
-| [`axonos-vault`](https://github.com/AxonOS-org/axonos-vault) | `v0.1.1` | the privacy boundary |
-| [`axonos-supervisor`](https://github.com/AxonOS-org/axonos-supervisor) | `v0.1.0` | the right to act |
+| [`axonos-hal`](https://github.com/AxonOS-org/axonos-hal) | `v0.2.0` | the contract with silicon |
+| [`axonos-vault`](https://github.com/AxonOS-org/axonos-vault) | `v0.2.0` | the privacy boundary |
+| [`axonos-supervisor`](https://github.com/AxonOS-org/axonos-supervisor) | `v0.1.1` | the right to act |
 
 ## Licensing
 
