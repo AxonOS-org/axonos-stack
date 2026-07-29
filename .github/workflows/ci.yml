@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  schedule:
+    # A tag can be repointed on any day, not only on a day someone pushes.
+    - cron: "41 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stack:
+    name: The organ stack holds together
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+
+      - name: Dependency tags still point where the lockfile says
+        # --locked proves the lockfile is unchanged; it does NOT notice a tag
+        # repointed on the remote, because cargo fetches the recorded revision
+        # and builds happily. This is the only check in the pipeline that sees
+        # that, which is why it runs first and on a schedule.
+        run: python3 scripts/verify_pins.py
+
+      - name: Build from the lockfile, exactly
+        run: cargo build --locked --release
+
+      - name: Formatting
+        run: cargo fmt --all -- --check
+
+      - name: Lints
+        run: cargo clippy --locked --all-targets -- -D warnings
+
+      - name: The reference session reproduces its transcript
+        # The artifact of this repository is not a binary, it is a behaviour.
+        # Diffing the transcript states what the system does; a checksum over
+        # a binary would only state what it compiled to.
+        run: |
+          cargo run --locked --release --bin session -- --seed 7 --frames 3000 > /tmp/session.txt
+          diff -u reference/session-7.txt /tmp/session.txt \
+            || { echo "::error::the reference session changed — read the diff above before regenerating"; exit 1; }
+          echo "transcript reproduced byte for byte"
+
+      - name: Tests
+        run: cargo test --locked
+
+      - name: Documentation
+        run: cargo doc --locked --no-deps
+        env:
+          RUSTDOCFLAGS: "-D warnings"
+
+      - name: Actions are pinned to a commit SHA
+        run: |
+          bad="$(grep -rhoE 'uses: [^ ]+@[A-Za-z0-9._/-]+' .github/workflows/*.yml \
+                 | sed -E 's/[[:space:]]+#.*//' | grep -vE '@[0-9a-f]{40}$' || true)"
+          [ -z "$bad" ] || { echo "::error::unpinned action: $bad"; exit 1; }
+          echo "every action pinned"

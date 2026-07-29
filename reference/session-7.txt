@@ -1,0 +1,41 @@
+AxonOS reference session
+  seed 7 · 250 SPS · 4000 µs period · 3000 frames · fault profile FIELD
+  chain WCRT 972 µs, 24.4% of the period
+  grant 1 · QualityFeedback · 3200 bits
+
+t=   0.000s  posture Nominal
+t=   1.000s  READ  bad 0 of 250 frames · 32 bits · 3168 left
+t=   2.000s  ACQ  Overrun { lost: 2 }
+t=   2.000s  posture Nominal → Degraded   (FrameLoss { lost: 2 })
+t=   2.000s  READ  bad 0 of 250 frames · 32 bits · 3136 left  [untrusted]
+t=   2.512s  posture Degraded → Nominal   (Recovered)
+t=   3.000s  READ  bad 0 of 250 frames · 32 bits · 3104 left
+t=   3.988s  ACQ  Integrity
+t=   4.000s  ACQ  Overrun { lost: 2 }
+t=   4.000s  posture Nominal → Degraded   (FrameLoss { lost: 2 })
+t=   4.000s  READ  bad 0 of 250 frames · 32 bits · 3072 left  [untrusted]
+t=   4.512s  posture Degraded → Nominal   (Recovered)
+t=   4.828s  posture Nominal → Degraded   (LeadOff { frames: 8 })
+t=   4.924s  posture Degraded → Restricted   (LeadOff { frames: 32 })
+t=   5.000s  READ  bad 51 of 250 frames · 32 bits · 3040 left  [untrusted]
+t=   6.000s  ACQ  Overrun { lost: 2 }
+t=   6.000s  READ  bad 250 of 250 frames · 32 bits · 3008 left  [untrusted]
+t=   7.000s  READ  bad 250 of 250 frames · 32 bits · 2976 left  [untrusted]
+t=   7.976s  ACQ  Integrity
+t=   8.000s  ACQ  Overrun { lost: 2 }
+t=   8.000s  READ  bad 250 of 250 frames · 32 bits · 2944 left  [untrusted]
+t=   9.000s  READ  bad 250 of 250 frames · 32 bits · 2912 left  [untrusted]
+t=  10.000s  ACQ  Overrun { lost: 2 }
+t=  10.000s  READ  bad 250 of 250 frames · 32 bits · 2880 left  [untrusted]
+t=  11.000s  READ  bad 250 of 250 frames · 32 bits · 2848 left  [untrusted]
+t=  11.964s  ACQ  Integrity
+
+── session summary ──
+  delivered 2992 · lost 10 · integrity failures 3
+  lead-off frames 1795 · saturated frames 0
+  stream integrity 99.6%
+  posture Restricted after 6 transition(s)
+  capabilities: acquire=true classify=true actuate=false trustworthy=false
+  disclosed 352 bits over 11 release(s) · 0 refused
+  vault holds 250 frames; grant 1 has 2848 of 3200 bits left
+  accounting: 2992 delivered + 10 lost = 3002 produced ✓

@@ -1,0 +1,18 @@
+[package]
+name = "axonos-stack"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+description = "The reference session: three AxonOS organs wired together, running deterministically from a seed, with the transcript checked in and diffed by CI."
+license = "Apache-2.0 OR MIT"
+repository = "https://github.com/AxonOS-org/axonos-stack"
+publish = false
+
+[[bin]]
+name = "session"
+path = "src/main.rs"
+
+[dependencies]
+axonos-hal = { git = "https://github.com/AxonOS-org/axonos-hal", tag = "v0.1.1", features = ["sim"] }
+axonos-vault = { git = "https://github.com/AxonOS-org/axonos-vault", tag = "v0.1.1" }
+axonos-supervisor = { git = "https://github.com/AxonOS-org/axonos-supervisor", tag = "v0.1.0" }
