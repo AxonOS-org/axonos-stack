@@ -46,6 +46,7 @@ t=  11.964s  ACQ  Integrity
   delivered 2992 · lost 10 · integrity failures 3
   conditioned 2992 · screened 1826 · disqualifying 1826
   band reports 11 at 4 targets
+  findings seen: slew
   NOTE  most frames tripped the slew limit. The simulator emits white
         noise, whose consecutive samples are independent; a real
         acquisition path is band-limited and does not step that far

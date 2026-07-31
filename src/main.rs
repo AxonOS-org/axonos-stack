@@ -312,6 +312,28 @@ fn run(seed: u64, frames: u64) -> i32 {
         "  band reports {band_reports} at {} targets",
         TARGETS_MILLI_HZ.len()
     );
+    if seen_findings != 0 {
+        // Name the findings rather than counting them. "1826 frames screened"
+        // is a number; "slew, drift" is what the recording did, and that
+        // difference is the reason the screener reports independent bits
+        // instead of one severity.
+        let all = ArtifactReport::from_bits(seen_findings);
+        let mut names = [""; 5];
+        let mut n = 0;
+        for (bit, name) in [
+            (ArtifactReport::SATURATED, "saturated"),
+            (ArtifactReport::AMPLITUDE, "amplitude"),
+            (ArtifactReport::SLEW, "slew"),
+            (ArtifactReport::FLATLINE, "flatline"),
+            (ArtifactReport::DRIFT, "drift"),
+        ] {
+            if all.has(bit) {
+                names[n] = name;
+                n += 1;
+            }
+        }
+        println!("  findings seen: {}", names[..n].join(", "));
+    }
     if screened * 2 > delivered {
         println!(
             "  NOTE  most frames tripped the slew limit. The simulator emits white\n\

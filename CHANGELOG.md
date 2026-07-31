@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.3.3] — 2026-08-01
+
+### Fixed
+- **Two copies of `axonos-hal` in one dependency graph.** The stack moved to
+  HAL 0.3.0 for operating points while `axonos-vault` and `axonos-supervisor`
+  stayed on 0.2.0. Cargo resolves that without complaint and the compiler then
+  refuses to unify the two `SampleFrame` types — producing an error that names
+  the same type twice, which is as confusing as it sounds.
+
+  No individual crate can observe this about itself; only the integration build
+  sees it, which is the argument for having one. Fixed by re-pinning the
+  dependents rather than by lowering the stack.
+- **An unused import failed CI.** `ArtifactReport` was imported and never used.
+  It is now used for what it was imported for: the summary names the findings a
+  session met rather than counting them, because "1826 frames screened" is a
+  number and "slew" is what the recording did.
+
 All notable changes to axonos-stack are recorded here. Format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); versions follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).

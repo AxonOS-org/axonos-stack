@@ -4,8 +4,8 @@ version = 3
 
 [[package]]
 name = "axonos-hal"
-version = "0.2.0"
-source = "git+https://github.com/AxonOS-org/axonos-hal?tag=v0.2.0#bf0a2d58abf576d61cfb2a02809bfbb320b1c4be"
+version = "0.3.0"
+source = "git+https://github.com/AxonOS-org/axonos-hal?tag=v0.3.0#1e9eff0c90efddb314cee89d8f7eb7f66cb8d4de"
 
 [[package]]
 name = "axonos-pipeline-core"
@@ -14,7 +14,7 @@ source = "git+https://github.com/AxonOS-org/axonos-signal-pipeline?tag=v0.9.2#c1
 
 [[package]]
 name = "axonos-stack"
-version = "0.3.2"
+version = "0.3.3"
 dependencies = [
  "axonos-hal",
  "axonos-pipeline-core",
@@ -24,16 +24,16 @@ dependencies = [
 
 [[package]]
 name = "axonos-supervisor"
-version = "0.1.1"
-source = "git+https://github.com/AxonOS-org/axonos-supervisor?tag=v0.1.1#58c8b05fcbf0b522484f8bc3370804b40b48bf15"
+version = "0.1.3"
+source = "git+https://github.com/AxonOS-org/axonos-supervisor?tag=v0.1.3#c36e8947b104b28555d6f2955d2ffbe4b02c9d69"
 dependencies = [
  "axonos-hal",
 ]
 
 [[package]]
 name = "axonos-vault"
-version = "0.2.0"
-source = "git+https://github.com/AxonOS-org/axonos-vault?tag=v0.2.0#ba3929d2d37ef3133a8a097176df438966c365cf"
+version = "0.2.2"
+source = "git+https://github.com/AxonOS-org/axonos-vault?tag=v0.2.2#749bcd21105e00aa4c58b90c4d773b415a4ed763"
 dependencies = [
  "axonos-hal",
 ]
