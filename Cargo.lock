@@ -14,7 +14,7 @@ source = "git+https://github.com/AxonOS-org/axonos-signal-pipeline?tag=v0.9.2#c1
 
 [[package]]
 name = "axonos-stack"
-version = "0.3.1"
+version = "0.3.2"
 dependencies = [
  "axonos-hal",
  "axonos-pipeline-core",

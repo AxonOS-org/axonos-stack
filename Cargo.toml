@@ -1,6 +1,6 @@
 [package]
 name = "axonos-stack"
-version = "0.3.1"
+version = "0.3.2"
 edition = "2021"
 rust-version = "1.75"
 description = "The reference session: four AxonOS organs wired together — acquisition, conditioning, privacy boundary and posture — running deterministically from a seed, with byte-exact transcripts diffed in CI."
