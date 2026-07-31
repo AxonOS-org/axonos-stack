@@ -80,6 +80,15 @@ for every reading — a misconfiguration wearing the appearance of a working
 run. Found by re-pinning, and fixed here: the return is checked and the
 session fails loudly.
 
+**A simulator that is not band-limited.** Adding the conditioning stage in
+0.3.0 put 61 % of frames over the slew limit — consecutive samples stepping
+further than physiology allows. The detector is right: `SimDevice` emits white
+noise, whose consecutive samples are independent, while a real acquisition path
+is band-limited and cannot step that far between samples. The threshold is the
+published one and stays; the transcript says so in a `NOTE` line rather than
+being quietly tuned until the demonstration looked better than the thing it
+demonstrates.
+
 **Numbers that were never measured.** `axonos-hal` v0.1.1 carried a
 seven-entry stage table documented as measured on the reference hardware, and
 a utilisation ceiling of 0.80 against a published 0.25 — which admitted
@@ -113,13 +122,16 @@ a silent behaviour change wearing a green check.
 ## The stack
 
 ```
-electrodes → axonos-hal ─┬─→ axonos-vault      (what leaves, and how much)
-                         └─→ axonos-supervisor (whether anything may act)
+electrodes → axonos-hal ─→ axonos-signal-pipeline ─┬─→ axonos-vault
+                           re-reference · screen   │    (what leaves, and how much)
+                           · narrowband power      └─→ axonos-supervisor
+                                                        (whether anything may act)
 ```
 
 | Organ | Pinned | Role |
 |:--|:--|:--|
 | [`axonos-hal`](https://github.com/AxonOS-org/axonos-hal) | `v0.2.0` | the contract with silicon |
+| [`axonos-signal-pipeline`](https://github.com/AxonOS-org/axonos-signal-pipeline) | `v0.9.1` | conditioning: re-referencing, artifact screening, spectral power |
 | [`axonos-vault`](https://github.com/AxonOS-org/axonos-vault) | `v0.2.0` | the privacy boundary |
 | [`axonos-supervisor`](https://github.com/AxonOS-org/axonos-supervisor) | `v0.1.1` | the right to act |
 
@@ -131,8 +143,8 @@ Apache-2.0 OR MIT, matching the AxonOS core.
 
 <div align="center">
 
-**© The AxonOS Project / Denis Yermakou**
+**© 2026 Denis Yermakou** — authored for The AxonOS Project
 
-[axonos.org](https://axonos.org) · [medium.com/@AxonOS](https://medium.com/@AxonOS) · connect@axonos.org · security@axonos.org
+[axonos.org](https://axonos.org) · connect@axonos.org · security@axonos.org
 
 </div>

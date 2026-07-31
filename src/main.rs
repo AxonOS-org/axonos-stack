@@ -1,4 +1,12 @@
-//! The three organs, wired together, running one deterministic session.
+//! The four organs, wired together, running one deterministic session.
+//!
+//! Until 0.3.0 this session went from the converter straight to the vault,
+//! skipping every stage that turns a sample into evidence. A reference session
+//! that references half the system is worth less than no reference at all,
+//! because it looks like coverage. `axonos-signal-pipeline` now sits in the
+//! middle: each frame is re-referenced against the common average, screened for
+//! five independent artifact findings, and — once a window has accumulated —
+//! reduced to narrowband power at the paradigm's target frequencies.
 //!
 //! Each organ is tested against the one below it. Nothing tested the chain —
 //! and a chain is where the interesting failures live, because each component
@@ -21,13 +29,30 @@
 
 use axonos_hal::{
     sim::{FaultProfile, SimDevice},
-    AcqError, AcquisitionDevice, Frontend, TimingBudget,
+    AcqError, AcquisitionDevice, Frontend, TimingBudget, CHANNELS,
 };
+use axonos_pipeline_core::artifact::{artifact_screen, ArtifactReport, ScreenLimits};
+use axonos_pipeline_core::spatial::{rereference, Reference};
+use axonos_pipeline_core::spectral::{goertzel_coeff_q14, goertzel_power};
 use axonos_supervisor::Supervisor;
 use axonos_vault::{ContactQuality, Denial, Grant, Purpose, Vault, WINDOW};
 
+/// Artifact limits for the canonical front end, in ADC counts.
+///
+/// The published defaults rather than numbers chosen to make this session look
+/// good: a session that tunes its own thresholds demonstrates tuning.
+const LIMITS: ScreenLimits = ScreenLimits::CANONICAL;
+
+/// SSVEP-shaped targets, in millihertz. Four flicker rates is the shape a real
+/// decision has, and the argmax is deliberately not taken here — choosing a
+/// target is a decision, and decisions do not belong in a transport session.
+const TARGETS_MILLI_HZ: [u32; 4] = [8_000, 10_000, 12_000, 15_000];
+
 /// How often a quality reading is requested, in frames.
 const RELEASE_EVERY: u64 = 250;
+
+/// Samples kept for the spectral stage — one second at 250 SPS.
+const RECENT: usize = 250;
 
 fn main() {
     let mut seed = 7u64;
@@ -108,13 +133,55 @@ fn run(seed: u64, frames: u64) -> i32 {
 
     let (mut delivered, mut lost, mut integrity, mut releases, mut refusals) =
         (0u64, 0u64, 0u64, 0u64, 0u64);
+    let (mut screened, mut disqualified, mut band_reports) = (0u64, 0u64, 0u64);
+    let mut seen_findings = 0u8;
+    let mut recent = [0i32; RECENT];
+    let mut recent_len = 0usize;
     let mut now_us = 0u64;
 
     for i in 0..frames {
         now_us = i * (budget.period_ns() / 1_000);
         match dev.read_frame() {
-            Ok(f) => {
+            Ok(mut f) => {
                 delivered += 1;
+
+                // Conditioning, in the order the contract declares. The
+                // re-reference comes before anything reads an amplitude: a
+                // common-mode offset screened as signal would be stored as
+                // evidence of one, and nothing downstream could tell.
+                if rereference(&mut f.codes, CHANNELS, Reference::CommonAverage).is_err() {
+                    println!("{}  COND  re-reference refused a frame", t(now_us));
+                }
+                let report = artifact_screen(&f.codes, LIMITS).unwrap_or_default();
+                if !report.is_clean() {
+                    screened += 1;
+                    if report.disqualifying() {
+                        disqualified += 1;
+                    }
+                    // Each distinct finding set is announced once. Printing on
+                    // every change would flood the transcript with one
+                    // alternation and bury the sets that appear later.
+                    if seen_findings & report.bits() != report.bits() {
+                        seen_findings |= report.bits();
+                        println!(
+                            "{}  COND  findings {:05b}{}",
+                            t(now_us),
+                            report.bits(),
+                            if report.disqualifying() {
+                                "  [disqualifying]"
+                            } else {
+                                ""
+                            }
+                        );
+                    }
+                }
+
+                // One channel's recent history, for the spectral stage. Fixed
+                // size, overwritten in place: a spectrum needs a window, and a
+                // window that grows is an allocation this crate does not make.
+                recent[recent_len % RECENT] = f.codes[0];
+                recent_len += 1;
+
                 let p = sup.observe_frame(&f);
                 vault.admit(f);
                 if p != posture {
@@ -168,6 +235,29 @@ fn run(seed: u64, frames: u64) -> i32 {
                 );
                 continue;
             }
+            // Narrowband power at the paradigm's targets, computed on the
+            // conditioned signal before anything leaves the boundary. Reported,
+            // not decided on: the argmax is the caller's, because choosing a
+            // target is a decision and a transport session must not make one.
+            let mut bands = [0u64; 4];
+            let mut have_bands = true;
+            for (slot, &f_mhz) in bands.iter_mut().zip(TARGETS_MILLI_HZ.iter()) {
+                match goertzel_coeff_q14(f_mhz, budget.sps()) {
+                    Some(c) => match goertzel_power(&recent[..recent_len.min(RECENT)], c, 10) {
+                        Ok(power) => *slot = power,
+                        Err(_) => have_bands = false,
+                    },
+                    None => have_bands = false,
+                }
+            }
+            if have_bands {
+                band_reports += 1;
+                println!(
+                    "{}  BAND  8Hz {} · 10Hz {} · 12Hz {} · 15Hz {}",
+                    t(now_us), bands[0], bands[1], bands[2], bands[3]
+                );
+            }
+
             let reduction = vault.reduce(ContactQuality::new());
             match vault.release(reduction, Purpose::QualityFeedback, 1, now_us) {
                 Ok(d) => {
@@ -213,6 +303,20 @@ fn run(seed: u64, frames: u64) -> i32 {
     println!();
     println!("── session summary ──");
     println!("  delivered {delivered} · lost {lost} · integrity failures {integrity}");
+    println!(
+        "  conditioned {delivered} · screened {screened} · disqualifying {disqualified}"
+    );
+    println!("  band reports {band_reports} at {} targets", TARGETS_MILLI_HZ.len());
+    if screened * 2 > delivered {
+        println!(
+            "  NOTE  most frames tripped the slew limit. The simulator emits white\n\
+             \x20       noise, whose consecutive samples are independent; a real\n\
+             \x20       acquisition path is band-limited and does not step that far\n\
+             \x20       between samples. The detector is right and the source is\n\
+             \x20       unrealistic — the threshold is the published one and is not\n\
+             \x20       tuned to make this session look better than it is."
+        );
+    }
     println!(
         "  lead-off frames {} · saturated frames {}",
         diag.lead_off_frames, diag.saturated_frames

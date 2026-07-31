@@ -4,34 +4,54 @@ AxonOS reference session
   grant 1 · QualityFeedback · 2048 bits (= log capacity × 32)
 
 t=   0.000s  posture Nominal
+t=   0.000s  COND  findings 00100  [disqualifying]
+t=   1.000s  BAND  8Hz 238 · 10Hz 135 · 12Hz 256 · 15Hz 72
 t=   1.000s  READ  bad 0 of 250 frames · 32 bits · 2016 left
 t=   2.000s  ACQ  Overrun { lost: 2 }
 t=   2.000s  posture Nominal → Degraded   (FrameLoss { lost: 2 })
+t=   2.000s  BAND  8Hz 571 · 10Hz 35 · 12Hz 86 · 15Hz 308
 t=   2.000s  READ  bad 0 of 250 frames · 32 bits · 1984 left  [untrusted]
 t=   2.512s  posture Degraded → Nominal   (Recovered)
+t=   3.000s  BAND  8Hz 11 · 10Hz 133 · 12Hz 366 · 15Hz 111
 t=   3.000s  READ  bad 0 of 250 frames · 32 bits · 1952 left
 t=   3.988s  ACQ  Integrity
 t=   4.000s  ACQ  Overrun { lost: 2 }
 t=   4.000s  posture Nominal → Degraded   (FrameLoss { lost: 2 })
+t=   4.000s  BAND  8Hz 380 · 10Hz 95 · 12Hz 80 · 15Hz 55
 t=   4.000s  READ  bad 0 of 250 frames · 32 bits · 1920 left  [untrusted]
 t=   4.512s  posture Degraded → Nominal   (Recovered)
 t=   4.828s  posture Nominal → Degraded   (LeadOff { frames: 8 })
 t=   4.924s  posture Degraded → Restricted   (LeadOff { frames: 32 })
+t=   5.000s  BAND  8Hz 144 · 10Hz 517 · 12Hz 56 · 15Hz 226
 t=   5.000s  READ  bad 51 of 250 frames · 32 bits · 1888 left  [untrusted]
 t=   6.000s  ACQ  Overrun { lost: 2 }
+t=   6.000s  BAND  8Hz 17 · 10Hz 196 · 12Hz 49 · 15Hz 97
 t=   6.000s  READ  bad 250 of 250 frames · 32 bits · 1856 left  [untrusted]
+t=   7.000s  BAND  8Hz 16 · 10Hz 118 · 12Hz 225 · 15Hz 121
 t=   7.000s  READ  bad 250 of 250 frames · 32 bits · 1824 left  [untrusted]
 t=   7.976s  ACQ  Integrity
 t=   8.000s  ACQ  Overrun { lost: 2 }
+t=   8.000s  BAND  8Hz 275 · 10Hz 57 · 12Hz 1 · 15Hz 386
 t=   8.000s  READ  bad 250 of 250 frames · 32 bits · 1792 left  [untrusted]
+t=   9.000s  BAND  8Hz 383 · 10Hz 91 · 12Hz 301 · 15Hz 594
 t=   9.000s  READ  bad 250 of 250 frames · 32 bits · 1760 left  [untrusted]
 t=  10.000s  ACQ  Overrun { lost: 2 }
+t=  10.000s  BAND  8Hz 325 · 10Hz 219 · 12Hz 340 · 15Hz 49
 t=  10.000s  READ  bad 250 of 250 frames · 32 bits · 1728 left  [untrusted]
+t=  11.000s  BAND  8Hz 232 · 10Hz 29 · 12Hz 244 · 15Hz 545
 t=  11.000s  READ  bad 250 of 250 frames · 32 bits · 1696 left  [untrusted]
 t=  11.964s  ACQ  Integrity
 
 ── session summary ──
   delivered 2992 · lost 10 · integrity failures 3
+  conditioned 2992 · screened 1826 · disqualifying 1826
+  band reports 11 at 4 targets
+  NOTE  most frames tripped the slew limit. The simulator emits white
+        noise, whose consecutive samples are independent; a real
+        acquisition path is band-limited and does not step that far
+        between samples. The detector is right and the source is
+        unrealistic — the threshold is the published one and is not
+        tuned to make this session look better than it is.
   lead-off frames 1795 · saturated frames 0
   stream integrity 99.6%
   posture Restricted after 6 transition(s)

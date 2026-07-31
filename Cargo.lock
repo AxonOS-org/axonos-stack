@@ -8,10 +8,16 @@ version = "0.2.0"
 source = "git+https://github.com/AxonOS-org/axonos-hal?tag=v0.2.0#bf0a2d58abf576d61cfb2a02809bfbb320b1c4be"
 
 [[package]]
+name = "axonos-pipeline-core"
+version = "0.9.1"
+source = "git+https://github.com/AxonOS-org/axonos-signal-pipeline?tag=v0.9.1#68648ddfdb027f8b6a47a3ffd8cfbc6afb052785"
+
+[[package]]
 name = "axonos-stack"
-version = "0.1.0"
+version = "0.3.0"
 dependencies = [
  "axonos-hal",
+ "axonos-pipeline-core",
  "axonos-supervisor",
  "axonos-vault",
 ]
