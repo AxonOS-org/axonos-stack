@@ -9,12 +9,12 @@ source = "git+https://github.com/AxonOS-org/axonos-hal?tag=v0.2.0#bf0a2d58abf576
 
 [[package]]
 name = "axonos-pipeline-core"
-version = "0.9.1"
-source = "git+https://github.com/AxonOS-org/axonos-signal-pipeline?tag=v0.9.1#68648ddfdb027f8b6a47a3ffd8cfbc6afb052785"
+version = "0.9.2"
+source = "git+https://github.com/AxonOS-org/axonos-signal-pipeline?tag=v0.9.2#c1e163dd94d48f32fdafb9e3a95d82f15c6da68d"
 
 [[package]]
 name = "axonos-stack"
-version = "0.3.0"
+version = "0.3.1"
 dependencies = [
  "axonos-hal",
  "axonos-pipeline-core",

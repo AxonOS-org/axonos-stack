@@ -131,7 +131,7 @@ electrodes → axonos-hal ─→ axonos-signal-pipeline ─┬─→ axonos-vaul
 | Organ | Pinned | Role |
 |:--|:--|:--|
 | [`axonos-hal`](https://github.com/AxonOS-org/axonos-hal) | `v0.2.0` | the contract with silicon |
-| [`axonos-signal-pipeline`](https://github.com/AxonOS-org/axonos-signal-pipeline) | `v0.9.1` | conditioning: re-referencing, artifact screening, spectral power |
+| [`axonos-signal-pipeline`](https://github.com/AxonOS-org/axonos-signal-pipeline) | `v0.9.2` | conditioning: re-referencing, artifact screening, spectral power |
 | [`axonos-vault`](https://github.com/AxonOS-org/axonos-vault) | `v0.2.0` | the privacy boundary |
 | [`axonos-supervisor`](https://github.com/AxonOS-org/axonos-supervisor) | `v0.1.1` | the right to act |
 

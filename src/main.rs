@@ -254,7 +254,11 @@ fn run(seed: u64, frames: u64) -> i32 {
                 band_reports += 1;
                 println!(
                     "{}  BAND  8Hz {} · 10Hz {} · 12Hz {} · 15Hz {}",
-                    t(now_us), bands[0], bands[1], bands[2], bands[3]
+                    t(now_us),
+                    bands[0],
+                    bands[1],
+                    bands[2],
+                    bands[3]
                 );
             }
 
@@ -303,10 +307,11 @@ fn run(seed: u64, frames: u64) -> i32 {
     println!();
     println!("── session summary ──");
     println!("  delivered {delivered} · lost {lost} · integrity failures {integrity}");
+    println!("  conditioned {delivered} · screened {screened} · disqualifying {disqualified}");
     println!(
-        "  conditioned {delivered} · screened {screened} · disqualifying {disqualified}"
+        "  band reports {band_reports} at {} targets",
+        TARGETS_MILLI_HZ.len()
     );
-    println!("  band reports {band_reports} at {} targets", TARGETS_MILLI_HZ.len());
     if screened * 2 > delivered {
         println!(
             "  NOTE  most frames tripped the slew limit. The simulator emits white\n\
