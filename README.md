@@ -8,6 +8,7 @@
 [![Locked](https://img.shields.io/badge/build-%2D%2Dlocked-0a4a8f?style=flat-square)](#what-ci-checks-and-why)
 [![Transcript](https://img.shields.io/badge/transcript-byte--exact-0a4a8f?style=flat-square)](reference/session-7.txt)
 [![License](https://img.shields.io/badge/License-Apache--2.0%20OR%20MIT-475569?style=flat-square)](#licensing)
+[![AxonOS Radar](https://img.shields.io/badge/AxonOS%20Radar-open%20neurotech%20map-1f8fae?style=flat-square&labelColor=0b1220)](https://axonos-bci.github.io/axonos-community-radar/)
 
 </div>
 
