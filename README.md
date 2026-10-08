@@ -74,6 +74,10 @@ boundary in the middle. It answers one question with a number: after consent is
 withdrawn, does anything still reach the application? The number is **0**, and
 the run exits non-zero if it is not.
 
+> **Read the long read:** [*Zero After Withdrawal — the AxonOS Reference BCI*](https://gist.github.com/AxonOS-BCI/b5cf55b5ce6a901bbeb0a34faaa1fd8a)
+> walks through the run second by second, what building it found, and what it
+> does not show. The requirement it led to is [RFC-0012](https://github.com/AxonOS-org/axonos-rfcs/blob/main/rfcs/0012-consent-withdrawal-reaches-every-disclosure-channel.md).
+
 ### What is demonstrated
 
 ```
@@ -237,7 +241,8 @@ intents at its gate; `axonos-vault` stops disclosures when a grant is revoked.
 Nothing connected the two, so a withdrawal would have stopped the intents while
 derived data kept flowing under a live grant. The reference BCI is the first
 code in the organisation that revokes the grant when consent is withdrawn, and
-it keeps the unconnected version as a test that must fail.
+it keeps the unconnected version as a test that must fail. The requirement
+that closes it for every implementation is [RFC-0012](https://github.com/AxonOS-org/axonos-rfcs/blob/main/rfcs/0012-consent-withdrawal-reaches-every-disclosure-channel.md).
 
 **One refusal, two numbers.** `axonos-consent` documents
 `Suppressed::abi_code()` as the error the SDK delivers — `0x05` suspended,
