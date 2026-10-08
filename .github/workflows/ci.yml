@@ -50,6 +50,21 @@ jobs:
             || { echo "::error::the reference session changed — read the diff above before regenerating"; exit 1; }
           echo "transcript reproduced byte for byte"
 
+      - name: The reference BCI verifies and reproduces both transcripts
+        # Exit code 1 is a failed verification — something reached the
+        # application after consent was withdrawn, a count disagreed, or the
+        # replay did not reproduce — and fails the step before any diff runs.
+        run: |
+          cargo run --locked --release --bin reference_bci > /tmp/bci.txt
+          diff -u reference/reference-bci-7.txt /tmp/bci.txt \
+            || { echo "::error::the reference BCI changed — read the diff above before regenerating"; exit 1; }
+          cargo run --locked --release --bin reference_bci -- --profile clean > /tmp/bci-clean.txt
+          diff -u reference/reference-bci-7-clean.txt /tmp/bci-clean.txt \
+            || { echo "::error::the clean reference BCI changed — read the diff above before regenerating"; exit 1; }
+          cargo run --locked --release --bin reference_bci -- --json > /tmp/bci.json
+          grep -q '"result": "VERIFIED"' /tmp/bci.json
+          echo "reference BCI verified; both transcripts reproduced byte for byte"
+
       - name: Tests
         run: cargo test --locked
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+// SPDX-FileCopyrightText: 2026 Denis Yermakou <connect@axonos.org>
+
 //! The artifact, tested as the artifact.
 //!
 //! These run the real binary rather than re-implementing its wiring, because a

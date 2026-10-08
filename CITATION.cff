@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: "AxonOS Reference Session"
+title: "AxonOS Reference Session and Reference BCI"
 message: "If you use this software, please cite it as below."
 type: software
 # Denis Yermakou is the author; The AxonOS Project is the umbrella the work is
@@ -14,9 +14,9 @@ authors:
     website: "https://axonos.org"
 repository-code: "https://github.com/AxonOS-org/axonos-stack"
 url: "https://axonos.org"
-abstract: "Four AxonOS organs wired together, running deterministically from a seed, with a byte-exact transcript diffed in CI."
-version: 0.3.2
-date-released: "2026-08-01"
+abstract: "AxonOS organs wired together and run deterministically from a seed: a reference session, and a reference BCI that carries synthetic EEG to application intent through the consent boundary and verifies that nothing reaches the application after consent is withdrawn. Byte-exact transcripts are diffed in CI."
+version: 0.4.0
+date-released: "2026-10-08"
 license: "Apache-2.0 OR MIT"
 # Copyright 2026 Denis Yermakou. See NOTICE for attribution terms.
 keywords:
@@ -24,3 +24,4 @@ keywords:
   - no-std
   - rust
   - deterministic
+  - consent

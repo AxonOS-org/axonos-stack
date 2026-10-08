@@ -2,9 +2,10 @@
 
 # axonos-stack
 
-### Three organs, wired together, running one deterministic session.
+### The organs wired together: one deterministic session, and one reference BCI.
 
-[![Tests](https://img.shields.io/badge/tests-6%20passing-0d7a5f?style=flat-square)](tests/reference.rs)
+[![Tests](https://img.shields.io/badge/tests-24%20passing-0d7a5f?style=flat-square)](tests/)
+[![Reference BCI](https://img.shields.io/badge/reference%20BCI-leakage%200-0d7a5f?style=flat-square)](reference/reference-bci-7.txt)
 [![Locked](https://img.shields.io/badge/build-%2D%2Dlocked-0a4a8f?style=flat-square)](#what-ci-checks-and-why)
 [![Transcript](https://img.shields.io/badge/transcript-byte--exact-0a4a8f?style=flat-square)](reference/session-7.txt)
 [![License](https://img.shields.io/badge/License-Apache--2.0%20OR%20MIT-475569?style=flat-square)](#licensing)
@@ -62,9 +63,150 @@ recording, and marks every subsequent reading untrusted. The last line is the
 identity the whole stack exists to keep: **delivered + lost = produced**. If it
 ever fails, one of the three organs is lying about what it saw.
 
+## AxonOS Reference BCI
+
+```bash
+cargo run --locked --release --bin reference_bci
+```
+
+One chain from synthetic EEG to an application intent, with the consent
+boundary in the middle. It answers one question with a number: after consent is
+withdrawn, does anything still reach the application? The number is **0**, and
+the run exits non-zero if it is not.
+
+### What is demonstrated
+
+```
+SimDevice ─→ pipeline ─→ supervisor ─┬─→ vault ──── grant 1 ─────────→ DERIVED ─┐
+axonos-hal   re-reference  posture   │   sealed RAW, bits budget                ├─→ application
+             screen                  └─→ decoder ─── consent gate ──→ INTENT ───┘   axonos-sdk types
+             band power                              axonos-consent
+```
+
+- **RAW, DERIVED and INTENT are kept apart.** Raw frames are sealed in
+  `axonos-vault` and go nowhere else; the application has no raw channel.
+  Derived data (contact quality) leaves only under a vault grant, charged in
+  bits and written to the vault's audit log. Intents (`IntentObservation`)
+  leave only through the `axonos-consent` publication gate.
+- **Withdrawal.** At frame 9 000 the simulated trusted path sends a signed
+  withdrawal. `ConsentMachine` admits it; from that frame the gate refuses
+  every intent and the application receives the SDK's terminal
+  `ConsentWithdrawn`. The session revokes the vault grant in the same step, so
+  every later derived release is refused as `Revoked`.
+- **Input that must change nothing.** Before the withdrawal, a truncated frame
+  and a withdrawal signed by an unknown key are refused and the state stays
+  `Granted`. After it, the replayed withdrawal is refused as `Replay` and a
+  correctly signed re-grant as `InadmissibleTransition`: `Withdrawn` is terminal.
+- **Verification.** The binary counts what the application received at or
+  after the withdrawal frame; checks that the gate's publication count equals
+  the intents the application received, and the vault's released bits equal
+  the bits it received; checks the accounting identity; then runs the whole
+  session a second time and compares SHA-256 digests of the raw input, of
+  everything the application received, and of the full event trace.
+
+Two deliberate defects are kept as tests — publishing without the gate, and
+admitting a withdrawal without revoking the grant — to show the verifier sees
+a leak when there is one.
+
+### Components
+
+| Organ | What this run uses |
+|:--|:--|
+| `axonos-hal` | `SimDevice` (FIELD or CLEAN fault profile), `TimingBudget::canonical(250)` |
+| `axonos-signal-pipeline` | common-average re-reference, artifact screen, Goertzel power at 8 / 10 / 12 / 15 Hz |
+| `axonos-supervisor` | posture and capabilities: whether a window may be classified, and whether it is trustworthy |
+| `axonos-vault` | the sealed window, `ContactQuality`, grant 1, `revoke` |
+| `axonos-consent` | `ConsentMachine`, `PublicationGate`, `Ed25519Strict` |
+| `axonos-sdk` | `Manifest` with `Navigation` + `SessionQuality`, `IntentObservation`, `Error::ConsentWithdrawn` |
+
+The decision rule is fixed and published here rather than tuned: the target
+with the most power becomes Up, Right, Down or Left if it holds at least half
+the power of the four bands, otherwise Neutral. A window the supervisor marks
+untrustworthy becomes a `Quality::Low` observation instead of a direction.
+Decisions run at 2 Hz because that is the kernel limit for `SessionQuality`,
+and the SDK refuses a manifest that asks for more.
+
+### What is measured, and what is not
+
+| Level | In this repository |
+|:--|:--|
+| **L1 — derived/formally verified** | Not produced here. `axonos-consent` carries the Kani harnesses and loom models for replay refusal, terminal withdrawal and the gate. |
+| **L2 — runtime measured** | Behaviour only: counts and SHA-256 digests of a deterministic session on a host, from synthetic input. **No timing is measured.** The 972 µs printed by both binaries is the response time `axonos-hal` admits configurations against; RFC-0001 states it as L2, and its soak trace is not yet published. |
+| **L3 — independently instrumented hardware** | None. |
+
+What this does not show:
+
+- **Real EEG.** `SimDevice` emits white noise. The intents are deterministic
+  and mean nothing; what is shown is where they may and may not flow, not
+  decoding accuracy.
+- **Attestation.** In the SDK's design the kernel attaches a truncated
+  HMAC-SHA256 to each intent. This session does not run a kernel, so the tag
+  is zero rather than an imitation.
+- **Concurrency.** The session is single-threaded; withdrawal and revocation
+  happen in one step. The gate under concurrent publication is
+  `axonos-consent`'s loom models, not this run.
+- **Erasure.** The sealed raw window is not destroyed on withdrawal. The
+  consent specification does not require it, and this session does not invent
+  the rule.
+
+Under the FIELD profile an electrode lifts at 4.8 s and never returns, so from
+then on almost every decision is a `Quality::Low` observation. That is the
+intended behaviour, and it is why the CLEAN profile is committed as a second
+transcript, where the same chain produces directions.
+
+### Expected output
+
+From [`reference/reference-bci-7.txt`](reference/reference-bci-7.txt):
+
+```text
+t=  36.000s  CONSENT  signed withdrawal, sequence 1 admitted → Withdrawn · state Withdrawn
+t=  36.000s  VAULT    grant 1 revoked
+t=  36.000s  GATE     intent suppressed (Withdrawn); application receives ConsentWithdrawn, terminal
+t=  36.000s  VAULT    derived release refused: Revoked
+t=  36.004s  CONSENT  the same withdrawal again refused: Replay · state Withdrawn
+t=  36.008s  CONSENT  signed re-grant, sequence 2 refused: InadmissibleTransition · state Withdrawn
+
+DERIVED DATA · contact quality, released under grant 1
+  released                              35   1120 bits
+  refused: grant revoked                12
+  received at/after withdrawal           0
+
+APPLICATION INTENT · axonos-sdk IntentObservation
+  generated                             94   direction 1 · neutral 3 · quality 90
+  delivered                             70
+  suppressed by consent gate            24
+  received at/after withdrawal           0
+
+CHECKS
+  ✓ accounting                      11965 delivered + 46 lost = 12011 produced, supervisor agrees
+  ✓ gate count = intents received   70 = 70
+  ✓ vault bits = bits received      1120 = 1120
+  ✓ post-withdrawal leakage = 0
+  ✓ every consent frame answered as the specification requires
+  ✓ deterministic replay            2 runs, 0 mismatch(es)
+
+trace SHA-256        cfaa12273ba1de9093cf9ea6a044d7fc9b47480cf0f893a69d5b623265a20629
+
+RESULT: VERIFIED
+```
+
+### Reproduce
+
+```bash
+cargo run --locked --release --bin reference_bci                          # FIELD, withdrawal at frame 9000
+cargo run --locked --release --bin reference_bci -- --profile clean       # a device behaving perfectly
+cargo run --locked --release --bin reference_bci -- --json                # the same run, machine-readable
+cargo run --locked --release --bin reference_bci -- --frames 100000 --withdraw-at 60000
+cargo run --locked --release --bin reference_bci -- --withdraw-at 0       # consent withdrawn before the first frame
+cargo test --locked
+```
+
+Exit code `0` is VERIFIED, `1` is FAILED, `2` is a bad argument. CI diffs both
+transcripts byte for byte, so the trace hash above is checked on every push.
+
 ## What the chain has found so far
 
-Three defects, none of which a component test could reach. This is the record,
+Defects none of which a component test could reach. This is the record,
 because a repository that only reports its successes is a repository whose
 failures went somewhere else.
 
@@ -90,6 +232,19 @@ published one and stays; the transcript says so in a `NOTE` line rather than
 being quietly tuned until the demonstration looked better than the thing it
 demonstrates.
 
+**A withdrawal that stopped half the system.** `axonos-consent` stops
+intents at its gate; `axonos-vault` stops disclosures when a grant is revoked.
+Nothing connected the two, so a withdrawal would have stopped the intents while
+derived data kept flowing under a live grant. The reference BCI is the first
+code in the organisation that revokes the grant when consent is withdrawn, and
+it keeps the unconnected version as a test that must fail.
+
+**One refusal, two numbers.** `axonos-consent` documents
+`Suppressed::abi_code()` as the error the SDK delivers — `0x05` suspended,
+`0x06` withdrawn. `axonos-sdk` numbers the same two errors `0x0301` and
+`0x0302`. The reference BCI maps the refusal by variant, not by code, and the
+two numbering schemes are left for one of the two crates to reconcile.
+
 **Numbers that were never measured.** `axonos-hal` v0.1.1 carried a
 seven-entry stage table documented as measured on the reference hardware, and
 a utilisation ceiling of 0.80 against a published 0.25 — which admitted
@@ -102,9 +257,9 @@ repository's transcript is versioned rather than regenerated quietly.
 
 | Check | Why it is not redundant |
 |:--|:--|
-| **`verify_pins.py`** | `--locked` proves the *lockfile* is unchanged. It does **not** notice a tag repointed on the remote: cargo fetches the recorded revision and builds happily. A tag is a mutable pointer with an immutable-sounding name, and this stack is assembled from three of them. Runs first, and on a daily schedule, because a tag can move on a day nobody pushes. |
+| **`verify_pins.py`** | `--locked` proves the *lockfile* is unchanged. It does **not** notice a tag repointed on the remote: cargo fetches the recorded revision and builds happily. A tag is a mutable pointer with an immutable-sounding name, and this stack is assembled from six of them. Runs first, and on a daily schedule, because a tag can move on a day nobody pushes. |
 | **`cargo build --locked`** | A library correctly ignores its lockfile; an application must commit one. This is the application. |
-| **transcript diff** | The artifact here is a *behaviour*, not a binary. Diffing the transcript states what the system does; a checksum over a binary would only state what it compiled to — and a `no_std` library stack has no binary worth hashing. |
+| **transcript diffs** | The artifact here is a *behaviour*, not a binary. Three transcripts are diffed: the session and the reference BCI under both fault profiles. Diffing the transcript states what the system does; a checksum over a binary would only state what it compiled to — and a `no_std` library stack has no binary worth hashing. |
 | **`cargo clippy -D warnings`** | — |
 | **`cargo doc -D warnings`** | A doc link that resolves in one feature configuration and not another has already broken a build in this project once. |
 | **actions pinned to SHA** | A tag on an action is the same mutable pointer, with write access to this repository. |
@@ -115,6 +270,8 @@ Only when a behaviour change is intended, and never to make CI green:
 
 ```bash
 cargo run --locked --bin session -- --seed 7 --frames 3000 > reference/session-7.txt
+cargo run --locked --release --bin reference_bci > reference/reference-bci-7.txt
+cargo run --locked --release --bin reference_bci -- --profile clean > reference/reference-bci-7-clean.txt
 ```
 
 The diff belongs in the commit message. A transcript regenerated without one is
@@ -123,18 +280,26 @@ a silent behaviour change wearing a green check.
 ## The stack
 
 ```
-electrodes → axonos-hal ─→ axonos-signal-pipeline ─┬─→ axonos-vault
-                           re-reference · screen   │    (what leaves, and how much)
-                           · narrowband power      └─→ axonos-supervisor
-                                                        (whether anything may act)
+electrodes → axonos-hal ─→ axonos-signal-pipeline ─┬─→ axonos-vault ──────────→ derived ─┐
+                           re-reference · screen   │    (what leaves, and how much)       │
+                           · narrowband power      ├─→ axonos-supervisor                  ├─→ application
+                                                   │    (whether anything may act)        │   (axonos-sdk)
+                                                   └─→ axonos-consent ────────→ intents ──┘
+                                                        (whether anything may flow)
 ```
 
 | Organ | Pinned | Role |
 |:--|:--|:--|
-| [`axonos-hal`](https://github.com/AxonOS-org/axonos-hal) | `v0.2.0` | the contract with silicon |
+| [`axonos-hal`](https://github.com/AxonOS-org/axonos-hal) | `v0.3.0` | the contract with silicon |
 | [`axonos-signal-pipeline`](https://github.com/AxonOS-org/axonos-signal-pipeline) | `v0.9.2` | conditioning: re-referencing, artifact screening, spectral power |
-| [`axonos-vault`](https://github.com/AxonOS-org/axonos-vault) | `v0.2.0` | the privacy boundary |
-| [`axonos-supervisor`](https://github.com/AxonOS-org/axonos-supervisor) | `v0.1.1` | the right to act |
+| [`axonos-vault`](https://github.com/AxonOS-org/axonos-vault) | `v0.2.2` | the privacy boundary |
+| [`axonos-supervisor`](https://github.com/AxonOS-org/axonos-supervisor) | `v0.1.3` | the right to act |
+| [`axonos-consent`](https://github.com/AxonOS-org/axonos-consent) | `v0.9.2` | the consent boundary — reference BCI only |
+| [`axonos-sdk`](https://github.com/AxonOS-org/axonos-sdk) | `v0.3.5` | the application's types — reference BCI only |
+
+The session binary uses the first four; the reference BCI uses all six.
+`ed25519-dalek` signs the simulated trusted path's frames and `sha2` computes
+the trace digests; both were already in the graph through `axonos-consent`.
 
 ## Licensing
 

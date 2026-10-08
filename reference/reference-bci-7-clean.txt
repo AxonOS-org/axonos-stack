@@ -1,0 +1,71 @@
+AXONOS REFERENCE BCI
+  seed 7 · 250 SPS · 12000 frames (48.000 s) · fault profile CLEAN · synthetic input
+  application org.axonos.reference-bci · Navigation + SessionQuality · 2 Hz
+  grant 1 · QualityFeedback · 2048 bits · trusted-path key derived from the seed
+
+t=   0.000s  CONSENT  Granted — fresh installation, manifest 1
+t=  18.000s  CONSENT  truncated frame (95 bytes) refused: WireFormatLength · state Granted
+t=  18.000s  CONSENT  withdrawal signed by an unknown key refused: SignatureInvalid · state Granted
+t=  36.000s  CONSENT  signed withdrawal, sequence 1 admitted → Withdrawn · state Withdrawn
+t=  36.000s  VAULT    grant 1 revoked
+t=  36.000s  GATE     intent suppressed (Withdrawn); application receives ConsentWithdrawn, terminal
+t=  36.000s  VAULT    derived release refused: Revoked
+t=  36.004s  CONSENT  the same withdrawal again refused: Replay · state Withdrawn
+t=  36.008s  CONSENT  signed re-grant, sequence 2 refused: InadmissibleTransition · state Withdrawn
+
+INPUT · axonos-hal SimDevice, synthetic
+  reads                              12000
+  frames delivered                   12000
+  frames lost (sequence gaps)            0
+  reads failed integrity                 0
+  frames over an artifact limit       7458   (slew: the simulator emits white noise)
+  posture at the end               Nominal   after 0 transition(s)
+
+RAW NEURAL DATA · stays in axonos-vault
+  frames hashed                      12000
+  sealed window at the end             250
+  bytes to the application               0   (there is no raw channel)
+
+DERIVED DATA · contact quality, released under grant 1
+  released                              35   1120 bits
+  refused: grant revoked                12
+  refused: budget exhausted              0
+  received at/after withdrawal           0
+
+APPLICATION INTENT · axonos-sdk IntentObservation
+  decisions                             94   held by posture 0
+  generated                             94   direction 56 · neutral 38 · quality 0
+  delivered                             70
+  suppressed by consent gate            24
+  received at/after withdrawal           0
+
+PERMISSION · axonos-consent
+  initial                          Granted
+  withdrawal at frame                 9000   t=36.000 s
+  consent frames admitted                1
+  consent frames refused                 4   0 answered otherwise than specified
+  final                          Withdrawn
+  post-withdrawal leakage                0
+
+CHECKS
+  ✓ accounting                      12000 delivered + 0 lost = 12000 produced, supervisor agrees
+  ✓ gate count = intents received   70 = 70
+  ✓ vault bits = bits received      1120 = 1120
+  ✓ post-withdrawal leakage = 0
+  ✓ every consent frame answered as the specification requires
+  ✓ deterministic replay            2 runs, 0 mismatch(es)
+
+EVIDENCE
+  timing   not measured by this run.
+           972 µs (17.3% of the period) is the response time axonos-hal admits against;
+           RFC-0001 states it as L2 and its soak trace is not yet published.
+  L1       none produced here. axonos-consent carries the Kani and loom
+           models for replay, absorbing withdrawal and the gate.
+  L2       behaviour only: counts and digests on a host, from synthetic input.
+  L3       none.
+
+raw SHA-256          0a651bd0a0e2b1a1cc4eecb6280cd164ba3d68b931daba8b7e395a9390117b22
+application SHA-256  251bd37d0555c2651893adc08adaa5fe5018a0d4d857210c1b7fe44c1f9c7824
+trace SHA-256        984124f0efeb8b0479843768455d39c1ebe24c34762e8696d5abe90227a78479
+
+RESULT: VERIFIED

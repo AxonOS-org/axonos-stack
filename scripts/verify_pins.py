@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: Apache-2.0 OR MIT
+# SPDX-FileCopyrightText: 2026 Denis Yermakou <connect@axonos.org>
 """Fail if a dependency tag no longer points where the lockfile says it does.
 
 `cargo build --locked` guarantees the *lockfile* is unchanged. It does not
@@ -7,8 +9,7 @@ the recorded revision and builds happily, so a tag repointed by whoever owns
 that repository is invisible to every other check in this pipeline.
 
 That is the supply-chain event worth catching. A tag is a mutable pointer with
-an immutable-sounding name, and the whole organ stack is assembled from three
-of them.
+an immutable-sounding name, and the whole organ stack is assembled from them.
 
 Read-only, standard library only, no token needed for public repositories.
 """

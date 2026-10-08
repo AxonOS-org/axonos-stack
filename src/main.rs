@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0 OR MIT
+// SPDX-FileCopyrightText: 2026 Denis Yermakou <connect@axonos.org>
+
 //! The four organs, wired together, running one deterministic session.
 //!
 //! Until 0.3.0 this session went from the converter straight to the vault,

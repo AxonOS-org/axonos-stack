@@ -1,9 +1,9 @@
 [package]
 name = "axonos-stack"
-version = "0.3.3"
+version = "0.4.0"
 edition = "2021"
-rust-version = "1.75"
-description = "The reference session: four AxonOS organs wired together — acquisition, conditioning, privacy boundary and posture — running deterministically from a seed, with byte-exact transcripts diffed in CI."
+rust-version = "1.85"
+description = "The reference session and the reference BCI: AxonOS organs wired together — acquisition, conditioning, privacy boundary, posture, consent and the application boundary — running deterministically from a seed, with byte-exact transcripts diffed in CI."
 license = "Apache-2.0 OR MIT"
 repository = "https://github.com/AxonOS-org/axonos-stack"
 publish = false
@@ -11,6 +11,10 @@ publish = false
 [[bin]]
 name = "session"
 path = "src/main.rs"
+
+[[bin]]
+name = "reference_bci"
+path = "src/reference_bci.rs"
 
 [dependencies]
 axonos-hal = { git = "https://github.com/AxonOS-org/axonos-hal", tag = "v0.3.0", features = ["sim"] }
@@ -20,3 +24,12 @@ axonos-supervisor = { git = "https://github.com/AxonOS-org/axonos-supervisor", t
 # to the vault, skipping every stage that makes a sample into evidence — which
 # meant the "reference session" referenced about half the system.
 axonos-pipeline-core = { git = "https://github.com/AxonOS-org/axonos-signal-pipeline", tag = "v0.9.2" }
+# The consent boundary and the application boundary. Pinned by tag like the
+# organs above, so verify_pins.py watches them too.
+axonos-consent = { git = "https://github.com/AxonOS-org/axonos-consent", tag = "v0.9.2" }
+axonos-sdk = { git = "https://github.com/AxonOS-org/axonos-sdk", tag = "v0.3.5" }
+# The trusted path is simulated, so something has to sign its frames. This is
+# the signer axonos-consent's own examples and vectors use; its verifier is the
+# one the machine runs. SHA-256 is already in the graph through it.
+ed25519-dalek = { version = "3.0.0", default-features = false }
+sha2 = { version = "0.11", default-features = false }
